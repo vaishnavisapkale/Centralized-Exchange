@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Engine schema: mirrors exchange tables only (no User — auth is backend's concern).
+// Migrations are managed by the backend. This schema is used only to generate
+// the Prisma client for the engine process.
+
+model UserBalance {
+  userId    String
+  asset     String
+  available Float    @default(0)
+  locked    Float    @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, asset])
+  @@map("user_balances")
+}
+
+model ExchangeOrder {
+  orderId   String   @id
+  userId    String
+  side      String
+  type      String
+  symbol    String
+  price     Float?
+  qty       Float
+  filledQty Float    @default(0)
+  status    String
+  createdAt DateTime
+  updatedAt DateTime @updatedAt
+
+  buyFills  ExchangeFill[] @relation("BuyOrderFills")
+  sellFills ExchangeFill[] @relation("SellOrderFills")
+
+  @@index([userId])
+  @@index([symbol, status])
+  @@index([createdAt])
+  @@map("exchange_orders")
+}
+
+model ExchangeFill {
+  fillId      String   @id
+  symbol      String
+  price       Float
+  qty         Float
+  buyOrderId  String
+  sellOrderId String
+  createdAt   DateTime
+
+  buyOrder  ExchangeOrder @relation("BuyOrderFills", fields: [buyOrderId], references: [orderId])
+  sellOrder ExchangeOrder @relation("SellOrderFills", fields: [sellOrderId], references: [orderId])
+
+  @@index([buyOrderId])
+  @@index([sellOrderId])
+  @@index([symbol, createdAt])
+  @@map("exchange_fills")
+}
+
+model ExchangeTrade {
+  id        String   @id @default(uuid())
+  symbol    String
+  price     Float
+  qty       Float
+  side      String
+  createdAt DateTime
+
+  @@index([symbol, createdAt])
+  @@map("exchange_trades")
+}

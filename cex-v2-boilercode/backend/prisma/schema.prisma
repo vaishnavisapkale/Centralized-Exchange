@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id       String @id @default(uuid())
+  username String @unique
+  password String
+}
+
+// ---------------------------------------------------------------------------
+// Exchange tables — managed by the engine, migrated here
+// ---------------------------------------------------------------------------
+
+model UserBalance {
+  userId    String
+  asset     String
+  available Float    @default(0)
+  locked    Float    @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, asset])
+  @@map("user_balances")
+}
+
+model ExchangeOrder {
+  orderId   String   @id
+  userId    String
+  side      String   // "buy" | "sell"
+  type      String   // "limit" | "market"
+  symbol    String
+  price     Float?
+  qty       Float
+  filledQty Float    @default(0)
+  status    String   // "open" | "partially_filled" | "filled" | "cancelled"
+  createdAt DateTime
+  updatedAt DateTime @updatedAt
+
+  buyFills  ExchangeFill[] @relation("BuyOrderFills")
+  sellFills ExchangeFill[] @relation("SellOrderFills")
+
+  @@index([userId])
+  @@index([symbol, status])
+  @@index([createdAt])
+  @@map("exchange_orders")
+}
+
+model ExchangeFill {
+  fillId      String        @id
+  symbol      String
+  price       Float
+  qty         Float
+  buyOrderId  String
+  sellOrderId String
+  createdAt   DateTime
+
+  buyOrder    ExchangeOrder @relation("BuyOrderFills",  fields: [buyOrderId],  references: [orderId])
+  sellOrder   ExchangeOrder @relation("SellOrderFills", fields: [sellOrderId], references: [orderId])
+
+  @@index([buyOrderId])
+  @@index([sellOrderId])
+  @@index([symbol, createdAt])
+  @@map("exchange_fills")
+}
+
+model ExchangeTrade {
+  id        String   @id @default(uuid())
+  symbol    String
+  price     Float
+  qty       Float
+  side      String
+  createdAt DateTime
+
+  @@index([symbol, createdAt])
+  @@map("exchange_trades")
+}
