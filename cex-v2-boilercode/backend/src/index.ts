@@ -22,7 +22,7 @@ const app = express();
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173")
   .split(",")
-  .map((s) => s.trim());
+  .map((s) => s.trim().replace(/\/$/, ""));
 
 // app.use(cors({
 //   origin: (origin, cb) => {
@@ -45,7 +45,7 @@ app.use(cors({
 
     console.log("BLOCKED ORIGIN =", origin);
 
-    cb(new Error(`CORS: origin ${origin} not allowed`));
+    cb(null, false);
   },
   credentials: true,
 }));
