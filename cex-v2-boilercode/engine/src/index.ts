@@ -137,6 +137,7 @@ app.listen(process.env.PORT || 10000, () => {
 });
 
 for (;;) {
+  
   const item = await brokerClient.brPop(env.incomingQueue, 0);
   if (!item) continue;
 
