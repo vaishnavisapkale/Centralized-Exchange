@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { createClient } from "redis";
+import express from "express";
 import { env } from "./utils/env.js";
 import {
   ORDERS,
@@ -126,6 +127,14 @@ async function handleEngineRequest(message: EngineRequest): Promise<unknown> {
 await hydrateFromDB();
 
 console.log(`Engine listening on Redis queue: ${env.incomingQueue}`);
+const app = express();
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.listen(process.env.PORT || 10000, () => {
+  console.log("Engine health server started");
+});
 
 for (;;) {
   const item = await brokerClient.brPop(env.incomingQueue, 0);
@@ -154,3 +163,6 @@ for (;;) {
     });
   }
 }
+
+
+
