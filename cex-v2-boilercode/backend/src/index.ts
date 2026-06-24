@@ -24,12 +24,16 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173")
   .split(",")
   .map((s) => s.trim());
 
+// app.use(cors({
+//   origin: (origin, cb) => {
+//     // allow server-to-server calls (no origin) and listed origins
+//     if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+//     cb(new Error(`CORS: origin ${origin} not allowed`));
+//   },
+//   credentials: true,
+// }));
 app.use(cors({
-  origin: (origin, cb) => {
-    // allow server-to-server calls (no origin) and listed origins
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    cb(new Error(`CORS: origin ${origin} not allowed`));
-  },
+  origin: true,
   credentials: true,
 }));
 app.use(express.json());
