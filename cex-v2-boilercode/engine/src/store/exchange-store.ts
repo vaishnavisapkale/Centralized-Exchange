@@ -84,6 +84,11 @@ export const FILLS:           Fill[]  = [];
 export const RESTING_ORDERS = new Map<string, RestingOrder>();
 export const TRADES         = new Map<string, Trade[]>();
 
+// Tracks users whose default balances are already committed to the DB.
+// Populated at hydration time; updated on first-write for brand-new users.
+// Avoids a redundant DB transaction on every get_user_balance call.
+const PERSISTED_USERS = new Set<string>();
+
 // Maximum trades kept in memory per symbol (prevents unbounded growth)
 const MAX_TRADES_PER_SYMBOL = 1_000;
 
@@ -128,6 +133,7 @@ export async function depositBalance(userId: string, asset: string, amount: numb
     create: { userId, asset, available: ab.available, locked: ab.locked },
   });
 
+  PERSISTED_USERS.add(userId);
   return { asset, available: ab.available };
 }
 
@@ -583,6 +589,7 @@ export async function hydrateFromDB(): Promise<void> {
   for (const b of dbBalances) {
     if (!BALANCES.has(b.userId)) BALANCES.set(b.userId, {});
     BALANCES.get(b.userId)![b.asset] = { available: b.available, locked: b.locked };
+    PERSISTED_USERS.add(b.userId);
   }
 
   // 2. Load fills → build per-order fill index for step 3
@@ -679,6 +686,8 @@ export async function hydrateFromDB(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function persistUserDefaultsIfNew(userId: string): Promise<void> {
+  if (PERSISTED_USERS.has(userId)) return;
+
   const balances = BALANCES.get(userId);
   if (!balances) return;
 
@@ -690,4 +699,5 @@ export async function persistUserDefaultsIfNew(userId: string): Promise<void> {
     }),
   );
   await prisma.$transaction(ops);
+  PERSISTED_USERS.add(userId);
 }
